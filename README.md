@@ -20,4 +20,4 @@ may be first time it will in initialize the databae and then again you need to r
 
 * click on <b>Advanced</b> button and click proceed
 
-## I will be happy if you fork and update the repo with other useful features and reusable code, thank you
+### I will be happy if you fork and update the repo with other useful features and reusable code, thank you
