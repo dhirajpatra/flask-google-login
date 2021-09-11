@@ -19,8 +19,10 @@ class GoogleLogin():
     GOOGLE_CLIENT_SECRET = None
     GOOGLE_DISCOVERY_URL = None
     client = None
-    
-    def __init__(self) -> None:
+    mongo = None
+
+    def __init__(self, mongo) -> None:
+        self.mongo = mongo
         self.GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
         self.GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
         self.GOOGLE_DISCOVERY_URL = os.getenv('GOOGLE_DISCOVERY_URL')
@@ -33,7 +35,7 @@ class GoogleLogin():
     def callback(self):
         # Get authorization code Google sent back to you
         code = request.args.get("code")
-        
+
         # Find out what URL to hit to get tokens that allow you to ask for
         # things on behalf of a user
         google_provider_cfg = self.get_google_provider_cfg()
@@ -54,7 +56,8 @@ class GoogleLogin():
         )
 
         # Parse the tokens!
-        self.client.parse_request_body_response(json.dumps(token_response.json()))
+        self.client.parse_request_body_response(
+            json.dumps(token_response.json()))
 
         # Now that you have tokens (yay) let's find and hit the URL
         # from Google that gives you the user's profile information,
@@ -76,16 +79,17 @@ class GoogleLogin():
 
         # Create a user in your db with the information provided
         # by Google
-        user = User(
-            id_=unique_id, name=users_name, email=users_email, profile_pic=picture
+        user = User.create(
+            self.mongo, unique_id, users_name, users_email, picture
         )
-
+        print(user)
         # Doesn't exist? Add it to the database.
-        if not User.get(unique_id):
-            User.create(unique_id, users_name, users_email, picture)
-            
-        return user    
-    
+        if not User.get(self.mongo, unique_id):
+            User.create(self.mongo, unique_id,
+                        users_name, users_email, picture)
+
+        return user
+
     def login_request_uri(self):
         # Find out what URL to hit for Google login
         google_provider_cfg = self.get_google_provider_cfg()
@@ -98,5 +102,5 @@ class GoogleLogin():
             redirect_uri=request.base_url + "/callback",
             scope=["openid", "email", "profile"],
         )
-        
+
         return request_uri

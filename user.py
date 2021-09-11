@@ -1,6 +1,6 @@
 from flask_login import UserMixin
+from pymongo import mongo_client
 
-from db import get_db
 
 class User(UserMixin):
     def __init__(self, id_, name, email, profile_pic):
@@ -10,25 +10,39 @@ class User(UserMixin):
         self.profile_pic = profile_pic
 
     @staticmethod
-    def get(user_id):
-        db = get_db()
-        user = db.execute(
-            "SELECT * FROM user WHERE id = ?", (user_id,)
-        ).fetchone()
+    def all(mongo):
+        user = mongo.db.users.find()
+        if not user:
+            return None
+        return user
+
+    @staticmethod
+    def get(mongo, id):
+        user = mongo.db.users.find_one_or_404({"id": id})
         if not user:
             return None
 
         user = User(
-            id_=user[0], name=user[1], email=user[2], profile_pic=user[3]
+            id_=user['id'], name=user['name'], email=user['email'], profile_pic=user['profile_pic']
         )
         return user
 
     @staticmethod
-    def create(id_, name, email, profile_pic):
-        db = get_db()
-        db.execute(
-            "INSERT INTO user (id, name, email, profile_pic) "
-            "VALUES (?, ?, ?, ?)",
-            (id_, name, email, profile_pic),
+    def create(mongo, id_, name, email, profile_pic):
+        users = mongo.db.users
+        user = {
+            "id": id_,
+            "name": name,
+            "email": email,
+            "profile_pic": profile_pic
+        }
+        id = users.insert_one(user).inserted_id
+        # get the new user details
+        user = mongo.db.users.find_one_or_404({"_id": id})
+        if not user:
+            return None
+
+        user = User(
+            id_=user['id'], name=user['name'], email=user['email'], profile_pic=user['profile_pic']
         )
-        db.commit()
+        return user
